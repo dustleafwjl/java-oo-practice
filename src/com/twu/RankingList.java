@@ -1,8 +1,11 @@
 package com.twu;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class RankingList {
     private static RankingList instance;
@@ -22,23 +25,66 @@ public class RankingList {
         return instance;
     }
     public void showRankingList() {
-        AtomicInteger index = new AtomicInteger(0);
-        specialHotSearchArr.stream().forEach(ele -> {
-            System.out.println(index.incrementAndGet()+ ". "+ ele.toString());
+        ArrayList<HotSearch> specialArr = new ArrayList();
+        ArrayList<HotSearch> showHotSearch = new ArrayList();
+        specialArr.addAll((ArrayList)specialHotSearchArr.stream().filter(ele -> {
+            for (HotSearch item : specialHotSearchArr) {
+                if(item.getRanking() == ele.getRanking() && item.getSellPrice() > ele.getSellPrice()){
+                    return false;
+                }
+            }
+            return true;
+        }).collect(Collectors.toList()));
+        specialArr.sort(Comparator.comparing(HotSearch::getRanking));
+        showHotSearch.addAll(hotSearchArr);
+        specialArr.forEach(ele -> {
+            showHotSearch.add(ele.getRanking()-1, ele);
         });
-        hotSearchArr.stream().forEach(ele -> {
-            System.out.println(index.incrementAndGet()+ ". "+ ele.toString());
-        });
+        for (int i = 0; i < showHotSearch.size(); i ++) {
+            System.out.println( (i+1) +". "+ showHotSearch.get(i).toString());
+        }
     }
     public void addHotSearch(String text) {
-        hotSearchArr.add(new HotSearch(text));
+        HotSearch newHotSearch = new HotSearch(text);
+        if(hotSearchArr.contains(newHotSearch)) {
+            System.out.println("添加热搜事件失败，事件重复，请重新操作！");
+            return;
+        }
+        hotSearchArr.add(newHotSearch);
     }
-    public void voteForHotSearch(int index, int quantity) {
-        HotSearch target = hotSearchArr.get(index - 1);
-        target.setCount(target.getCount() + quantity);
+    public void addSuperHotSearch(String text) {
+        HotSearch superHotSearch = new HotSearch(text);
+        superHotSearch.setSuper(true);
+        if(hotSearchArr.contains(superHotSearch)) {
+            System.out.println("添加超级热搜事件失败，事件重复，请重新操作！");
+            return;
+        }
+        hotSearchArr.add(superHotSearch);
     }
-    public void buyHotSearch(int index) {
-        specialHotSearchArr.add(hotSearchArr.subList(index, index).get(0));
+    public boolean voteForHotSearch(String hotSearchText, int quantity) {
+        HotSearch target = hotSearchArr.stream().filter(ele -> ele.getText().equals(hotSearchText)).findFirst().orElse(null);
+        if (target == null) {
+            System.out.println("热搜不存在！");
+            return false;
+        }
+        if(target.getIsSuper()) {
+            target.setCount(target.getCount() + quantity * 2);
+        } else {
+            target.setCount(target.getCount() + quantity);
+        }
+        updateRankingList();
+        System.out.println("投票成功！");
+        return true;
+    }
+    public void buyHotSearch(String hotSearchName, int ranking, int price) {
+        HotSearch target = hotSearchArr.stream().filter(ele -> ele.getText().equals(hotSearchName)).findFirst().orElse(null);
+        hotSearchArr.remove(target);
+        target.setRanking(ranking);
+        target.setSellPrice(price);
+        specialHotSearchArr.add(target);
         System.out.println("添加成功！");
+    }
+    private void updateRankingList() {
+        hotSearchArr = (ArrayList)hotSearchArr.stream().sorted(Comparator.comparing(HotSearch::getCount).reversed()).collect(Collectors.toList());
     }
 }

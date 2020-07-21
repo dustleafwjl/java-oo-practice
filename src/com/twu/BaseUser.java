@@ -27,4 +27,9 @@ public class BaseUser {
         System.out.println(title);
         return reader.next();
     }
+    public void addHotSearch() {
+        String text = this.getDataBySystemIn("请输入要添加的热搜事件名称：");
+        RankingList.getInstance().addHotSearch(text);
+        this.start();
+    }
 }
